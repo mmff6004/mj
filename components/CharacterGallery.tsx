@@ -2,6 +2,7 @@ import React from 'react';
 import type { Character } from '../types';
 import { EditIcon } from './icons/EditIcon';
 import { UserPlusIcon } from './icons/UserPlusIcon';
+import { TrashIcon } from './icons/TrashIcon';
 
 interface CharacterGalleryProps {
   characters: Character[];
@@ -9,6 +10,7 @@ interface CharacterGalleryProps {
   onSelectCharacter: (id: string | null) => void;
   onEditCharacter: (character: Character) => void;
   onCreateCharacter: () => void;
+  onDeleteCharacter: (id: string) => void;
   disabled: boolean;
 }
 
@@ -18,6 +20,7 @@ export const CharacterGallery: React.FC<CharacterGalleryProps> = ({
   onSelectCharacter,
   onEditCharacter,
   onCreateCharacter,
+  onDeleteCharacter,
   disabled
 }) => {
   return (
@@ -66,17 +69,32 @@ export const CharacterGallery: React.FC<CharacterGalleryProps> = ({
                  <p className="absolute bottom-1 left-2 right-2 text-white text-xs font-semibold truncate">
                    {char.name}
                  </p>
-                 <button
-                    onClick={(e) => {
-                        e.stopPropagation(); // Prevent selection when clicking edit
-                        if (!disabled) onEditCharacter(char);
-                    }}
-                    className="absolute top-1 right-1 p-1.5 bg-black/60 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-orange-600"
-                    aria-label={`Edit ${char.name}`}
-                    title={`Edit ${char.name}`}
-                 >
-                    <EditIcon className="w-4 h-4" />
-                 </button>
+                 <div className="absolute top-1 right-1 flex gap-1">
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation(); // Prevent selection when clicking edit
+                            if (!disabled) onEditCharacter(char);
+                        }}
+                        className="p-1.5 bg-black/60 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-orange-600"
+                        aria-label={`Edit ${char.name}`}
+                        title={`Edit ${char.name}`}
+                    >
+                        <EditIcon className="w-4 h-4" />
+                    </button>
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            if (!disabled && window.confirm(`Are you sure you want to delete ${char.name}?`)) {
+                                onDeleteCharacter(char.id);
+                            }
+                        }}
+                        className="p-1.5 bg-black/60 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                        aria-label={`Delete ${char.name}`}
+                        title={`Delete ${char.name}`}
+                    >
+                        <TrashIcon className="w-4 h-4" />
+                    </button>
+                 </div>
               </div>
             ))}
           </div>

@@ -10,6 +10,7 @@ interface CharacterCreatorModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSaveCharacter: (character: Character) => void;
+  onDeleteCharacter: (id: string) => void;
   existingCharacter: Character | null;
 }
 
@@ -18,13 +19,30 @@ interface RefImage {
   preview: string;
 }
 
-export const CharacterCreatorModal: React.FC<CharacterCreatorModalProps> = ({ isOpen, onClose, onSaveCharacter, existingCharacter }) => {
+const promptSuggestions = [
+  'Confident gaze',
+  'Athletic build',
+  'Elegant posture',
+  'Alluring smile',
+  'Radiant',
+  'Flowing hair',
+  'Form-fitting attire',
+  'Dynamic pose',
+  'Mysterious aura',
+  'Graceful',
+  'Strong jawline',
+  'Chiseled features'
+];
+
+
+export const CharacterCreatorModal: React.FC<CharacterCreatorModalProps> = ({ isOpen, onClose, onSaveCharacter, existingCharacter, onDeleteCharacter }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [referenceImages, setReferenceImages] = useState<RefImage[]>([]);
   const [generatedPortraitBase64, setGeneratedPortraitBase64] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const isEditMode = !!existingCharacter;
 
@@ -34,6 +52,7 @@ export const CharacterCreatorModal: React.FC<CharacterCreatorModalProps> = ({ is
       setDescription(existingCharacter.description);
       setGeneratedPortraitBase64(existingCharacter.referenceImageBase64 || null);
     }
+    setConfirmingDelete(false);
   }, [isOpen, existingCharacter]);
 
   const resetState = useCallback(() => {
@@ -43,6 +62,7 @@ export const CharacterCreatorModal: React.FC<CharacterCreatorModalProps> = ({ is
     setGeneratedPortraitBase64(null);
     setIsLoading(false);
     setError(null);
+    setConfirmingDelete(false);
   }, []);
 
   const handleClose = () => {
@@ -74,16 +94,14 @@ export const CharacterCreatorModal: React.FC<CharacterCreatorModalProps> = ({ is
   };
 
   const handleGeneratePortrait = async () => {
-    if (referenceImages.length === 0 && !isEditMode) {
-      setError("Please provide at least one reference image for a new character.");
-      return;
-    }
     if (!description) {
         setError("Please provide a description.");
         return;
     }
     setIsLoading(true);
     setError(null);
+    
+    const oldPortrait = generatedPortraitBase64;
     setGeneratedPortraitBase64(null);
 
     try {
@@ -92,6 +110,7 @@ export const CharacterCreatorModal: React.FC<CharacterCreatorModalProps> = ({ is
       setGeneratedPortraitBase64(result.editedImageBase64);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to generate portrait.");
+      setGeneratedPortraitBase64(oldPortrait); // Restore the old portrait on failure
     } finally {
       setIsLoading(false);
     }
@@ -111,6 +130,21 @@ export const CharacterCreatorModal: React.FC<CharacterCreatorModalProps> = ({ is
     onSaveCharacter(characterData);
     handleClose();
   };
+  
+  const handleDelete = () => {
+    if (!existingCharacter) return;
+  
+    if (confirmingDelete) {
+      onDeleteCharacter(existingCharacter.id);
+      handleClose();
+    } else {
+      setConfirmingDelete(true);
+    }
+  };
+  
+  const handleSuggestionClick = (suggestion: string) => {
+    setDescription(prev => prev ? `${prev}, ${suggestion}` : suggestion);
+  };
 
   if (!isOpen) return null;
 
@@ -119,7 +153,7 @@ export const CharacterCreatorModal: React.FC<CharacterCreatorModalProps> = ({ is
       <div className="bg-gray-950 border border-gray-800 rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
         <div className="p-6 border-b border-gray-800">
           <h2 className="text-2xl font-bold text-white">{isEditMode ? 'Edit Character' : 'Create New Character'}</h2>
-          <p className="text-sm text-gray-400 mt-1">{isEditMode ? 'Modify your character\'s details and regenerate their portrait.' : 'Define a character for visual consistency.'}</p>
+          <p className="text-sm text-gray-400 mt-1">{isEditMode ? 'Modify your character\'s details and regenerate their portrait.' : 'Define a character using a description, reference images, or both for visual consistency.'}</p>
         </div>
 
         <div className="p-6 flex-grow overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -132,8 +166,25 @@ export const CharacterCreatorModal: React.FC<CharacterCreatorModalProps> = ({ is
                     <label htmlFor="char-desc" className="block mb-2 text-sm font-medium text-gray-300">Description</label>
                     <textarea id="char-desc" rows={4} value={description} onChange={e => setDescription(e.target.value)} placeholder="Describe key visual features, clothing, and style..." className="w-full p-2 bg-gray-900 border border-gray-700 rounded-md focus:ring-orange-500 focus:border-orange-500"/>
                 </div>
+                 <div className="flex flex-col gap-2">
+                    <label className="block text-xs font-medium text-gray-400">Prompt Suggestions (Click to add)</label>
+                    <div className="flex flex-wrap gap-2">
+                      {promptSuggestions.map(suggestion => (
+                        <button
+                          key={suggestion}
+                          onClick={() => handleSuggestionClick(suggestion)}
+                          className="px-2.5 py-1 text-xs font-medium rounded-full transition-colors duration-200 bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white"
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                </div>
                 <div>
-                    <label className="block mb-2 text-sm font-medium text-gray-300">Reference Images (up to 5)</label>
+                    <div className="flex justify-between items-center mb-2">
+                        <label className="text-sm font-medium text-gray-300">Reference Images</label>
+                        <span className="text-xs font-mono bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full">{`${referenceImages.length} / 5`}</span>
+                    </div>
                     <div className="grid grid-cols-3 gap-2">
                         {referenceImages.map((img, i) => (
                             <img key={i} src={img.preview} alt="reference" className="w-full h-24 object-cover rounded-md" />
@@ -168,11 +219,28 @@ export const CharacterCreatorModal: React.FC<CharacterCreatorModalProps> = ({ is
             </div>
         </div>
 
-        <div className="p-6 border-t border-gray-800 flex justify-end gap-4">
-          <button onClick={handleClose} className="px-4 py-2 bg-gray-800 text-gray-300 rounded-md hover:bg-gray-700">Cancel</button>
-          <button onClick={handleSave} disabled={!generatedPortraitBase64 || !name} className="px-6 py-2 bg-orange-600 text-white font-semibold rounded-md hover:bg-orange-700 disabled:bg-gray-600 disabled:cursor-not-allowed">
-            {isEditMode ? 'Save Changes' : 'Save Character'}
-          </button>
+        <div className="p-6 border-t border-gray-800 flex justify-between items-center">
+            <div>
+                {isEditMode && (
+                    <button 
+                        onClick={handleDelete}
+                        onMouseLeave={() => setConfirmingDelete(false)}
+                        className={`px-4 py-2 text-sm rounded-md transition-all duration-300 ${
+                            confirmingDelete 
+                            ? 'bg-red-600 text-white scale-105' 
+                            : 'bg-red-900/70 text-red-300 hover:bg-red-800/70'
+                        }`}
+                    >
+                        {confirmingDelete ? 'Confirm Delete?' : 'Delete'}
+                    </button>
+                )}
+            </div>
+            <div className="flex gap-4">
+                <button onClick={handleClose} className="px-4 py-2 bg-gray-800 text-gray-300 rounded-md hover:bg-gray-700">Cancel</button>
+                <button onClick={handleSave} disabled={!generatedPortraitBase64 || !name || !description || isLoading} className="px-6 py-2 bg-orange-600 text-white font-semibold rounded-md hover:bg-orange-700 disabled:bg-gray-600 disabled:cursor-not-allowed">
+                    {isEditMode ? 'Save Changes' : 'Save Character'}
+                </button>
+            </div>
         </div>
       </div>
     </div>

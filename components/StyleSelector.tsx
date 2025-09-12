@@ -1,7 +1,7 @@
 import React from 'react';
 
 const styles = [
-  'Realistic', 'Cinematic', 'Anime', 'Animation', 'Horror', 'Hentai'
+  'Realistic', 'Cinematic', 'Anime', 'Animation', 'Horror', 'Fantasy', 'X'
 ];
 
 interface StyleSelectorProps {
