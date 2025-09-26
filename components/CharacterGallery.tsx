@@ -1,8 +1,11 @@
+
 import React from 'react';
 import type { Character } from '../types';
 import { EditIcon } from './icons/EditIcon';
 import { UserPlusIcon } from './icons/UserPlusIcon';
 import { TrashIcon } from './icons/TrashIcon';
+import { ShirtIcon } from './icons/BookOpenIcon';
+
 
 interface CharacterGalleryProps {
   characters: Character[];
@@ -11,6 +14,7 @@ interface CharacterGalleryProps {
   onEditCharacter: (character: Character) => void;
   onCreateCharacter: () => void;
   onDeleteCharacter: (id: string) => void;
+  onGenerateOutfits: (character: Character) => void;
   disabled: boolean;
 }
 
@@ -21,6 +25,7 @@ export const CharacterGallery: React.FC<CharacterGalleryProps> = ({
   onEditCharacter,
   onCreateCharacter,
   onDeleteCharacter,
+  onGenerateOutfits,
   disabled
 }) => {
   return (
@@ -69,13 +74,24 @@ export const CharacterGallery: React.FC<CharacterGalleryProps> = ({
                  <p className="absolute bottom-1 left-2 right-2 text-white text-xs font-semibold truncate">
                    {char.name}
                  </p>
-                 <div className="absolute top-1 right-1 flex gap-1">
+                 <div className="absolute top-1 right-1 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            if (!disabled) onGenerateOutfits(char);
+                        }}
+                        className="p-1.5 bg-black/60 rounded-full text-white hover:bg-orange-600"
+                        aria-label={`Generate Outfits for ${char.name}`}
+                        title={`Generate Outfits for ${char.name}`}
+                    >
+                        <ShirtIcon className="w-4 h-4" />
+                    </button>
                     <button
                         onClick={(e) => {
                             e.stopPropagation(); // Prevent selection when clicking edit
                             if (!disabled) onEditCharacter(char);
                         }}
-                        className="p-1.5 bg-black/60 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-orange-600"
+                        className="p-1.5 bg-black/60 rounded-full text-white hover:bg-orange-600"
                         aria-label={`Edit ${char.name}`}
                         title={`Edit ${char.name}`}
                     >
@@ -84,11 +100,9 @@ export const CharacterGallery: React.FC<CharacterGalleryProps> = ({
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
-                            if (!disabled && window.confirm(`Are you sure you want to delete ${char.name}?`)) {
-                                onDeleteCharacter(char.id);
-                            }
+                            if (!disabled) onDeleteCharacter(char.id);
                         }}
-                        className="p-1.5 bg-black/60 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                        className="p-1.5 bg-black/60 rounded-full text-white hover:bg-red-600"
                         aria-label={`Delete ${char.name}`}
                         title={`Delete ${char.name}`}
                     >

@@ -1,22 +1,24 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { generateCharacterImage } from '../services/geminiService';
-import type { Character } from '../types';
+import type { Character, EditResult } from '../types';
 import { LoadingSpinner } from './LoadingSpinner';
 import { UploadIcon } from './icons/UploadIcon';
 import { CheckCircleIcon } from './icons/CheckCircleIcon';
+import { fileToBase64 } from '../utils/fileUtils';
 
 interface CharacterCreatorModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSaveCharacter: (character: Character) => void;
-  onDeleteCharacter: (id: string) => void;
   existingCharacter: Character | null;
 }
 
-interface RefImage {
-  file: File;
-  preview: string;
+interface RefImageData {
+    id: string;
+    data: string; // base64
+    mimeType: string;
+    preview: string;
 }
 
 const promptSuggestions = [
@@ -34,15 +36,13 @@ const promptSuggestions = [
   'Chiseled features'
 ];
 
-
-export const CharacterCreatorModal: React.FC<CharacterCreatorModalProps> = ({ isOpen, onClose, onSaveCharacter, existingCharacter, onDeleteCharacter }) => {
+export const CharacterCreatorModal: React.FC<CharacterCreatorModalProps> = ({ isOpen, onClose, onSaveCharacter, existingCharacter }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [referenceImages, setReferenceImages] = useState<RefImage[]>([]);
-  const [generatedPortraitBase64, setGeneratedPortraitBase64] = useState<string | null>(null);
+  const [referenceImages, setReferenceImages] = useState<RefImageData[]>([]);
+  const [generatedPortrait, setGeneratedPortrait] = useState<EditResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const isEditMode = !!existingCharacter;
 
@@ -50,48 +50,66 @@ export const CharacterCreatorModal: React.FC<CharacterCreatorModalProps> = ({ is
     if (isOpen && existingCharacter) {
       setName(existingCharacter.name);
       setDescription(existingCharacter.description);
-      setGeneratedPortraitBase64(existingCharacter.referenceImageBase64 || null);
+      if (existingCharacter.referenceImageBase64) {
+        setGeneratedPortrait({
+          editedImageBase64: existingCharacter.referenceImageBase64,
+          editedText: null,
+          mimeType: existingCharacter.referenceImageMimeType || 'image/png'
+        });
+      }
     }
-    setConfirmingDelete(false);
   }, [isOpen, existingCharacter]);
 
   const resetState = useCallback(() => {
     setName('');
     setDescription('');
+    referenceImages.forEach(img => URL.revokeObjectURL(img.preview));
     setReferenceImages([]);
-    setGeneratedPortraitBase64(null);
+    setGeneratedPortrait(null);
     setIsLoading(false);
     setError(null);
-    setConfirmingDelete(false);
-  }, []);
+  }, [referenceImages]);
 
   const handleClose = () => {
     resetState();
     onClose();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files).slice(0, 5 - referenceImages.length);
-      const newImages = files.map(file => ({
-        file,
-        preview: URL.createObjectURL(file),
-      }));
-      setReferenceImages(prev => [...prev, ...newImages]);
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+
+    const files = Array.from(e.target.files).slice(0, 5 - referenceImages.length);
+    if (files.length === 0) return;
+
+    // Fix: Explicitly type `file` as `File` to resolve incorrect type inference.
+    const newImagesPromises = files.map(async (file: File) => {
+        const preview = URL.createObjectURL(file);
+        try {
+            const { base64, mimeType } = await fileToBase64(file);
+            return {
+                id: uuidv4(),
+                data: base64,
+                mimeType: mimeType,
+                preview: preview,
+            };
+        } catch (err) {
+            URL.revokeObjectURL(preview);
+            throw err;
+        }
+    });
+
+    try {
+        const newImagesData = await Promise.all(newImagesPromises);
+        setReferenceImages(prev => [...prev, ...newImagesData]);
+    } catch (err) {
+        if (err instanceof Error) {
+            setError(`Could not read one of the files. Please try again. (Details: ${err.message})`);
+        } else {
+            setError("An unknown error occurred while reading files.");
+        }
     }
   };
 
-  const fileToBase64 = (file: File): Promise<{ data: string; mimeType: string }> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve({
-        data: (reader.result as string).split(',')[1],
-        mimeType: file.type
-      });
-      reader.onerror = (error) => reject(error);
-    });
-  };
 
   const handleGeneratePortrait = async () => {
     if (!description) {
@@ -101,23 +119,27 @@ export const CharacterCreatorModal: React.FC<CharacterCreatorModalProps> = ({ is
     setIsLoading(true);
     setError(null);
     
-    const oldPortrait = generatedPortraitBase64;
-    setGeneratedPortraitBase64(null);
+    const oldPortrait = generatedPortrait;
+    setGeneratedPortrait(null);
 
     try {
-      const imagePayloads = await Promise.all(referenceImages.map(img => fileToBase64(img.file)));
+      const imagePayloads = referenceImages.map(img => ({ data: img.data, mimeType: img.mimeType }));
       const result = await generateCharacterImage(description, imagePayloads);
-      setGeneratedPortraitBase64(result.editedImageBase64);
+      setGeneratedPortrait(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to generate portrait.");
-      setGeneratedPortraitBase64(oldPortrait); // Restore the old portrait on failure
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Failed to generate portrait.");
+      }
+      setGeneratedPortrait(oldPortrait); // Restore the old portrait on failure
     } finally {
       setIsLoading(false);
     }
   };
   
   const handleSave = () => {
-    if (!name || !description || !generatedPortraitBase64) {
+    if (!name || !description || !generatedPortrait?.editedImageBase64) {
         setError("Please provide a name, description, and generate/set a portrait before saving.");
         return;
     }
@@ -125,21 +147,11 @@ export const CharacterCreatorModal: React.FC<CharacterCreatorModalProps> = ({ is
         id: existingCharacter?.id || uuidv4(),
         name,
         description,
-        referenceImageBase64: generatedPortraitBase64
+        referenceImageBase64: generatedPortrait.editedImageBase64,
+        referenceImageMimeType: generatedPortrait.mimeType || 'image/png'
     };
     onSaveCharacter(characterData);
     handleClose();
-  };
-  
-  const handleDelete = () => {
-    if (!existingCharacter) return;
-  
-    if (confirmingDelete) {
-      onDeleteCharacter(existingCharacter.id);
-      handleClose();
-    } else {
-      setConfirmingDelete(true);
-    }
   };
   
   const handleSuggestionClick = (suggestion: string) => {
@@ -186,8 +198,8 @@ export const CharacterCreatorModal: React.FC<CharacterCreatorModalProps> = ({ is
                         <span className="text-xs font-mono bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full">{`${referenceImages.length} / 5`}</span>
                     </div>
                     <div className="grid grid-cols-3 gap-2">
-                        {referenceImages.map((img, i) => (
-                            <img key={i} src={img.preview} alt="reference" className="w-full h-24 object-cover rounded-md" />
+                        {referenceImages.map((img) => (
+                            <img key={img.id} src={img.preview} alt="reference" className="w-full h-24 object-cover rounded-md" />
                         ))}
                         {referenceImages.length < 5 && (
                             <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-700 rounded-md cursor-pointer hover:bg-gray-800/50">
@@ -204,40 +216,25 @@ export const CharacterCreatorModal: React.FC<CharacterCreatorModalProps> = ({ is
             <div className="flex flex-col items-center justify-center p-4 bg-gray-900 rounded-lg border border-gray-800 min-h-[20rem]">
                 {isLoading && <LoadingSpinner />}
                 {error && <p className="text-red-400 text-center">{error}</p>}
-                {generatedPortraitBase64 && !isLoading && (
+                {generatedPortrait?.editedImageBase64 && !isLoading && (
                     <div className="text-center">
-                        <img src={`data:image/png;base64,${generatedPortraitBase64}`} alt="Generated portrait" className="w-full object-contain rounded-md" />
+                        <img src={`data:${generatedPortrait.mimeType || 'image/png'};base64,${generatedPortrait.editedImageBase64}`} alt="Generated portrait" className="w-full object-contain rounded-md" />
                          <div className="flex items-center justify-center gap-2 mt-4 text-green-400">
                            <CheckCircleIcon className="w-5 h-5"/>
                            <p className="text-sm font-medium">Portrait Generated!</p>
                         </div>
                     </div>
                 )}
-                {!isLoading && !generatedPortraitBase64 && !error && (
+                {!isLoading && !generatedPortrait && !error && (
                     <p className="text-gray-500 text-center">Your generated character portrait will appear here.</p>
                 )}
             </div>
         </div>
 
-        <div className="p-6 border-t border-gray-800 flex justify-between items-center">
-            <div>
-                {isEditMode && (
-                    <button 
-                        onClick={handleDelete}
-                        onMouseLeave={() => setConfirmingDelete(false)}
-                        className={`px-4 py-2 text-sm rounded-md transition-all duration-300 ${
-                            confirmingDelete 
-                            ? 'bg-red-600 text-white scale-105' 
-                            : 'bg-red-900/70 text-red-300 hover:bg-red-800/70'
-                        }`}
-                    >
-                        {confirmingDelete ? 'Confirm Delete?' : 'Delete'}
-                    </button>
-                )}
-            </div>
+        <div className="p-6 border-t border-gray-800 flex justify-end items-center">
             <div className="flex gap-4">
                 <button onClick={handleClose} className="px-4 py-2 bg-gray-800 text-gray-300 rounded-md hover:bg-gray-700">Cancel</button>
-                <button onClick={handleSave} disabled={!generatedPortraitBase64 || !name || !description || isLoading} className="px-6 py-2 bg-orange-600 text-white font-semibold rounded-md hover:bg-orange-700 disabled:bg-gray-600 disabled:cursor-not-allowed">
+                <button onClick={handleSave} disabled={!generatedPortrait?.editedImageBase64 || !name || !description || isLoading} className="px-6 py-2 bg-orange-600 text-white font-semibold rounded-md hover:bg-orange-700 disabled:bg-gray-600 disabled:cursor-not-allowed">
                     {isEditMode ? 'Save Changes' : 'Save Character'}
                 </button>
             </div>

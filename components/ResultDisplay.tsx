@@ -9,9 +9,10 @@ interface ResultDisplayProps {
   result: EditResult | null;
   originalImagePreview: string | null;
   mode: 'edit' | 'generate';
+  loadingText?: string;
 }
 
-export const ResultDisplay: React.FC<ResultDisplayProps> = ({ isLoading, error, result, originalImagePreview, mode }) => {
+export const ResultDisplay: React.FC<ResultDisplayProps> = ({ isLoading, error, result, originalImagePreview, mode, loadingText }) => {
   const handleDownload = () => {
     if (!result) return;
     const link = document.createElement('a');
@@ -27,7 +28,7 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ isLoading, error, 
       return (
         <div className="flex flex-col items-center justify-center h-full space-y-4">
           <LoadingSpinner />
-          <p className="text-gray-400 animate-pulse">AI is thinking...</p>
+          <p className="text-gray-400 animate-pulse">{loadingText || 'AI is thinking...'}</p>
         </div>
       );
     }

@@ -1,6 +1,7 @@
 export interface EditResult {
   editedImageBase64: string;
   editedText: string | null;
+  mimeType?: string;
 }
 
 export interface GalleryItem extends EditResult {
@@ -8,8 +9,9 @@ export interface GalleryItem extends EditResult {
 }
 
 export interface Character {
-  id: string;
+  id:string;
   name: string;
   description: string;
   referenceImageBase64?: string | null;
+  referenceImageMimeType?: string | null;
 }
