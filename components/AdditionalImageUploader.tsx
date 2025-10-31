@@ -27,7 +27,7 @@ export const AdditionalImageUploader: React.FC<AdditionalImageUploaderProps> = (
   };
 
   return (
-    <div className="bg-gray-800/50 p-4 rounded-lg">
+    <div className="bg-black/20 p-4 rounded-lg">
       <label className="block mb-2 text-sm font-medium text-gray-300">
         Add Image (Optional)
       </label>
@@ -51,7 +51,7 @@ export const AdditionalImageUploader: React.FC<AdditionalImageUploaderProps> = (
           <label
             onDragOver={handleDragOver}
             onDrop={handleDrop}
-            className="flex justify-center items-center w-full h-32 border-2 border-dashed border-gray-700 rounded-lg cursor-pointer hover:border-orange-500 hover:bg-gray-800/50 transition-colors"
+            className="flex justify-center items-center w-full h-32 border-2 border-dashed border-gray-700 rounded-lg cursor-pointer hover:border-orange-500/50 hover:bg-black/20 transition-colors"
           >
             <div className="flex flex-col items-center justify-center text-gray-500 text-center">
               <UploadIcon className="w-8 h-8 mb-2" />

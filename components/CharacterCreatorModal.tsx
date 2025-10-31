@@ -161,9 +161,9 @@ export const CharacterCreatorModal: React.FC<CharacterCreatorModalProps> = ({ is
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={handleClose}>
-      <div className="bg-gray-950 border border-gray-800 rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
-        <div className="p-6 border-b border-gray-800">
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 transition-opacity duration-300" onClick={handleClose}>
+      <div className="bg-gray-900/50 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="p-6 border-b border-white/10">
           <h2 className="text-2xl font-bold text-white">{isEditMode ? 'Edit Character' : 'Create New Character'}</h2>
           <p className="text-sm text-gray-400 mt-1">{isEditMode ? 'Modify your character\'s details and regenerate their portrait.' : 'Define a character using a description, reference images, or both for visual consistency.'}</p>
         </div>
@@ -172,11 +172,11 @@ export const CharacterCreatorModal: React.FC<CharacterCreatorModalProps> = ({ is
             <div className="flex flex-col gap-4">
                 <div>
                     <label htmlFor="char-name" className="block mb-2 text-sm font-medium text-gray-300">Character Name</label>
-                    <input id="char-name" type="text" value={name} onChange={e => setName(e.target.value)} placeholder="e.g., Captain Astra" className="w-full p-2 bg-gray-900 border border-gray-700 rounded-md focus:ring-orange-500 focus:border-orange-500"/>
+                    <input id="char-name" type="text" value={name} onChange={e => setName(e.target.value)} placeholder="e.g., Captain Astra" className="w-full p-2 bg-white/5 border border-white/10 rounded-md focus:ring-orange-500 focus:border-orange-500"/>
                 </div>
                 <div>
                     <label htmlFor="char-desc" className="block mb-2 text-sm font-medium text-gray-300">Description</label>
-                    <textarea id="char-desc" rows={4} value={description} onChange={e => setDescription(e.target.value)} placeholder="Describe key visual features, clothing, and style..." className="w-full p-2 bg-gray-900 border border-gray-700 rounded-md focus:ring-orange-500 focus:border-orange-500"/>
+                    <textarea id="char-desc" rows={4} value={description} onChange={e => setDescription(e.target.value)} placeholder="Describe key visual features, clothing, and style..." className="w-full p-2 bg-white/5 border border-white/10 rounded-md focus:ring-orange-500 focus:border-orange-500"/>
                 </div>
                  <div className="flex flex-col gap-2">
                     <label className="block text-xs font-medium text-gray-400">Prompt Suggestions (Click to add)</label>
@@ -185,7 +185,7 @@ export const CharacterCreatorModal: React.FC<CharacterCreatorModalProps> = ({ is
                         <button
                           key={suggestion}
                           onClick={() => handleSuggestionClick(suggestion)}
-                          className="px-2.5 py-1 text-xs font-medium rounded-full transition-colors duration-200 bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white"
+                          className="px-2.5 py-1 text-xs font-medium rounded-full transition-colors duration-200 bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white"
                         >
                           {suggestion}
                         </button>
@@ -195,25 +195,25 @@ export const CharacterCreatorModal: React.FC<CharacterCreatorModalProps> = ({ is
                 <div>
                     <div className="flex justify-between items-center mb-2">
                         <label className="text-sm font-medium text-gray-300">Reference Images</label>
-                        <span className="text-xs font-mono bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full">{`${referenceImages.length} / 5`}</span>
+                        <span className="text-xs font-mono bg-gray-900/50 text-gray-400 px-2 py-0.5 rounded-full">{`${referenceImages.length} / 5`}</span>
                     </div>
                     <div className="grid grid-cols-3 gap-2">
                         {referenceImages.map((img) => (
                             <img key={img.id} src={img.preview} alt="reference" className="w-full h-24 object-cover rounded-md" />
                         ))}
                         {referenceImages.length < 5 && (
-                            <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-700 rounded-md cursor-pointer hover:bg-gray-800/50">
+                            <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-700 rounded-md cursor-pointer hover:bg-white/5 hover:border-orange-500/50 transition-colors">
                                 <UploadIcon className="w-8 h-8 text-gray-500" />
                                 <input type="file" multiple accept="image/*" className="hidden" onChange={handleFileChange} />
                             </label>
                         )}
                     </div>
                 </div>
-                 <button onClick={handleGeneratePortrait} disabled={isLoading || !description} className="w-full mt-2 p-3 bg-gray-800 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                 <button onClick={handleGeneratePortrait} disabled={isLoading || !description} className="w-full mt-2 p-3 bg-white/5 border border-white/10 rounded-lg text-gray-300 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed">
                     {isLoading ? 'Generating...' : 'Generate Character Portrait'}
                 </button>
             </div>
-            <div className="flex flex-col items-center justify-center p-4 bg-gray-900 rounded-lg border border-gray-800 min-h-[20rem]">
+            <div className="flex flex-col items-center justify-center p-4 bg-black/20 rounded-lg border border-white/10 min-h-[20rem]">
                 {isLoading && <LoadingSpinner />}
                 {error && <p className="text-red-400 text-center">{error}</p>}
                 {generatedPortrait?.editedImageBase64 && !isLoading && (
@@ -231,10 +231,10 @@ export const CharacterCreatorModal: React.FC<CharacterCreatorModalProps> = ({ is
             </div>
         </div>
 
-        <div className="p-6 border-t border-gray-800 flex justify-end items-center">
+        <div className="p-6 border-t border-white/10 flex justify-end items-center">
             <div className="flex gap-4">
-                <button onClick={handleClose} className="px-4 py-2 bg-gray-800 text-gray-300 rounded-md hover:bg-gray-700">Cancel</button>
-                <button onClick={handleSave} disabled={!generatedPortrait?.editedImageBase64 || !name || !description || isLoading} className="px-6 py-2 bg-orange-600 text-white font-semibold rounded-md hover:bg-orange-700 disabled:bg-gray-600 disabled:cursor-not-allowed">
+                <button onClick={handleClose} className="px-4 py-2 bg-white/5 text-gray-300 rounded-md hover:bg-white/10 transition-colors">Cancel</button>
+                <button onClick={handleSave} disabled={!generatedPortrait?.editedImageBase64 || !name || !description || isLoading} className="px-6 py-2 bg-orange-600 text-white font-semibold rounded-md hover:bg-orange-700 disabled:bg-orange-600/50 disabled:cursor-not-allowed transition-colors">
                     {isEditMode ? 'Save Changes' : 'Save Character'}
                 </button>
             </div>

@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Modality } from "@google/genai";
 import type { EditResult, Character } from '../types';
 
@@ -19,9 +20,10 @@ const handleApiError = (e: unknown, context: string): never => {
     errorMessage.includes('xhr error') ||
     errorMessage.includes('500') ||
     errorMessage.toLowerCase().includes('network') ||
-    errorMessage.toLowerCase().includes('failed to fetch')
+    errorMessage.toLowerCase().includes('failed to fetch') ||
+    errorMessage.includes('Requested entity was not found.') // Specific for Veo key errors
   ) {
-    throw new Error(`A server or network error occurred while trying to ${context}. This might be a temporary issue. Please check your connection and try again.`);
+    throw new Error(errorMessage); // Rethrow specific errors for the UI to handle
   }
 
   // Check for common API errors like safety violations.
@@ -84,7 +86,7 @@ export const editImage = async (
   additionalImage?: { base64: string; mimeType: string } | null
 ): Promise<EditResult> => {
   try {
-    const model = 'gemini-2.5-flash-image-preview';
+    const model = 'gemini-2.5-flash-image';
     const imageParts = [];
     const textParts = [];
 
@@ -117,14 +119,27 @@ export const editImage = async (
     const faithfulnessInstruction = character ? `\n**CHARACTER FAITHFULNESS:** ${getFaithfulnessInstruction(faithfulness)}` : '';
 
     const instructionText = `
-    **TASK:** You are an expert multilingual image editor. Edit the TARGET image based on the user's instruction. The user's instructions and character details are provided in their native language, which you must understand and follow.
+    **TASK:** You are an expert multilingual image editor and digital artist specializing in photorealistic and cinematic compositions. Edit the TARGET image based on the user's instruction.
+
+    **STYLE:** The final image MUST be photorealistic. Do not produce cartoons, illustrations, or paintings. The style should be that of a high-end photograph.
+
+    **MOST IMPORTANT RULE: LIGHTING HARMONY.** Your primary goal is to make the final image look completely real and not like a composite. The lighting on any added or modified element (like a character) MUST perfectly match the lighting of the background/scene. Failure to do so creates a fake-looking image.
+
+    **Step-by-step lighting process:**
+    1.  **Analyze the Scene:** First, carefully analyze the lighting in the TARGET image. Identify the direction, color (temperature), and softness/hardness of all primary and secondary light sources.
+    2.  **Apply to Subject:** Re-light any added character or element to match this analysis. This includes:
+        - **Key Light:** The main light source must hit the subject from the same angle and with the same quality as in the scene.
+        - **Fill Light & Shadows:** Shadows cast by the subject must be in the correct direction, and the darkness of the shadows should match the scene's ambient light.
+        - **Rim Light:** If the scene has backlighting, create appropriate rim lighting on the subject.
+        - **Color Bleed:** The subject should pick up subtle color reflections from the surrounding environment. For example, a character in a golden room should have warm, golden tints in their highlights and ambient lighting.
+    3.  **Seamless Integration:** All elements must be perfectly blended. Pay close attention to perspective, scale, focus/depth of field, and grain/noise matching.
     
     **IMAGE ROLES:**
     ${imageRoles.join('\n')}
     ${characterDetails}
     ${faithfulnessInstruction}
     
-    **USER'S INSTRUCTION TO FOLLOW:**
+    **USER'S INSTRUCTION TO FOLLOW (provided in their native language):**
     `.trim();
     textParts.push({ text: instructionText });
     
@@ -182,20 +197,32 @@ export const generateImage = async (
 ): Promise<EditResult> => {
   try {
     if (character?.referenceImageBase64) {
-      const model = 'gemini-2.5-flash-image-preview';
+      const model = 'gemini-2.5-flash-image';
       
       const faithfulnessInstruction = getFaithfulnessInstruction(faithfulness);
 
       const instructionText = `
-        **TASK:** You are a master multilingual artist. Create a new image based on the user's instruction. You MUST incorporate the character from the REFERENCE image into the new scene. The final image should have a ${aspectRatio} aspect ratio. The user's instructions and character details are provided in their native language, which you must understand and follow.
-        
+        **TASK:** You are a master multilingual artist specializing in photorealistic and cinematic compositions. Create a new image featuring the character from the REFERENCE image, placed in a new scene based on the user's instruction. The final image should have a ${aspectRatio} aspect ratio.
+
+        **STYLE:** The final image MUST be photorealistic. Do not produce cartoons, illustrations, or paintings. The style should be that of a high-end photograph.
+
+        **MOST IMPORTANT RULE: LIGHTING HARMONY.** Your primary goal is to make the final image look completely real and not like a composite. The character MUST be lit by the environment you create. They cannot look "pasted on".
+
+        **CRITICAL INSTRUCTIONS:**
+        1.  **Unified Lighting:** The character and the scene must appear to be photographed with the same camera, at the same time, in the same location. They MUST share a single, cohesive lighting environment.
+        2.  **Environmental Interaction:** The light from the scene (e.g., sunlight, city lights, candles) must realistically fall on the character.
+            - Shadows cast by the character must match the direction and softness of shadows in the scene.
+            - The character should pick up "color bleed" - subtle color reflections from their surroundings.
+            - The overall color temperature and mood of the lighting must be consistent across the entire image.
+        3.  **Seamless Integration:** Ensure the character is perfectly blended into the scene regarding perspective, scale, focus/depth of field, and image grain/noise.
+
         **REFERENCE IMAGE:** The provided image is a reference for the character '${character.name}'.
         
         **CHARACTER DETAILS (may be in user's language):** ${character.description}
 
         **CHARACTER FAITHFULNESS:** ${faithfulnessInstruction}
 
-        **USER'S INSTRUCTION TO FOLLOW:**
+        **USER'S INSTRUCTION TO FOLLOW (provided in their native language):**
       `.trim();
       
       const mimeType = character.referenceImageMimeType || 'image/png';
@@ -239,9 +266,20 @@ export const generateImage = async (
       const model = 'imagen-4.0-generate-001';
       
       const fullPrompt = `
-        **TASK:** You are a master multilingual artist. Create a new image based on the user's instruction. The user's instructions are provided in their native language, which you must understand and follow.
-        
-        **USER'S INSTRUCTION TO FOLLOW:** ${prompt}
+        **PRIMARY DIRECTIVE:** Create a photorealistic image that looks like a real photograph taken with a high-end camera (e.g., a DSLR or mirrorless camera with a prime lens).
+
+        **STYLE & AESTHETIC:**
+        - **Hyperrealism:** The image MUST be indistinguishable from a real-world photograph.
+        - **Cinematic Quality:** Employ sophisticated lighting techniques, including soft key lights, subtle fill lights, and rim lighting to create depth and mood. The lighting must be natural and believable for the scene.
+        - **Professional Photography:** Emulate the quality of professional photography. This includes realistic depth of field (bokeh), natural film grain (not digital noise), and perfect focus on the main subject.
+
+        **ABSOLUTE PROHIBITIONS (DO NOT DO THE FOLLOWING):**
+        - **NO Cartoons, Anime, or Illustrations:** Do not generate any form of non-photorealistic art.
+        - **NO Paintings or Digital Art Styles:** The image must not look like it was painted or created with digital art software.
+        - **NO Unrealistic Features:** Avoid plastic-looking skin, exaggerated proportions, or unnatural colors unless specifically requested.
+        - **NO "Uncanny Valley":** Ensure human subjects look completely natural and lifelike.
+
+        **USER'S INSTRUCTION (Interpret and execute with maximum realism):** ${prompt}
       `.trim();
       
       const outputMimeType = 'image/png';
@@ -250,7 +288,7 @@ export const generateImage = async (
         prompt: fullPrompt,
         config: {
           numberOfImages: 1,
-          aspectRatio: aspectRatio as "1:1" | "16:9" | "9:16",
+          aspectRatio: aspectRatio as "1:1" | "16:9" | "9:16" | "4:3" | "3:4",
           outputMimeType,
         },
       });
@@ -276,14 +314,14 @@ export const generateImage = async (
  */
 export const upscaleImage = async (imageBase64: string, mimeType: string): Promise<EditResult> => {
     try {
-        const model = 'gemini-2.5-flash-image-preview';
+        const model = 'gemini-2.5-flash-image';
 
         const prompt = `
         **Role:** You are an expert photo retoucher and digital artist.
-        **Task:** Upscale the provided image into a hyperrealistic, high-resolution, 8k photograph.
+        **Task:** Upscale the provided image into a hyperrealistic, high-resolution, 8k photograph with cinematic lighting.
         **Instructions:**
         - If the original image is stylized (e.g., cartoon, anime), reimagine it as a real photograph.
-        - Enhance details, lighting, and textures for maximum realism.
+        - Enhance details, lighting, and textures for maximum realism. The lighting should be cohesive and cinematic.
         - Correct any imperfections and increase overall clarity.
         - The final output must be a single, high-quality upscaled image.
         `.trim();
@@ -342,7 +380,7 @@ export const generateCharacterImage = async (
     if (referenceImages.length === 0) {
       const model = 'imagen-4.0-generate-001';
       const fullPrompt = `
-        Create a photorealistic, full-body portrait of a single character. The following description is provided in the user's native language, which you must understand and follow.
+        Create a photorealistic, full-body portrait of a single character with cinematic studio lighting. The style must be that of a real, high-end photograph, not an illustration or cartoon. The following description is provided in the user's native language, which you must understand and follow.
         **DESCRIPTION:** ${description}
       `.trim();
       
@@ -366,11 +404,13 @@ export const generateCharacterImage = async (
     }
     
     // If there ARE reference images, use the multi-modal model.
-    const model = 'gemini-2.5-flash-image-preview';
+    const model = 'gemini-2.5-flash-image';
 
     const instructionText = `
-      **TASK:** You are a multilingual character concept artist. Synthesize a *single* new character portrait. This new character should be a cohesive and believable person that creatively combines the most prominent features (like face structure, hair style, and overall likeness) from ALL the provided reference images. The final image should be a full-body, photorealistic portrait.
+      **TASK:** You are a multilingual character concept artist. Synthesize a *single* new character portrait. This new character should be a cohesive and believable person that creatively combines the most prominent features (like face structure, hair style, and overall likeness) from ALL the provided reference images. The final image should be a full-body, photorealistic portrait with dramatic, cinematic studio lighting.
       
+      **STYLE:** The final image MUST be photorealistic. Do not produce cartoons, illustrations, or paintings. The style should be that of a high-end photograph.
+
       **USER'S CHARACTER DESCRIPTION (in their native language):**
     `.trim();
 
@@ -431,12 +471,18 @@ export const generateOutfitForCharacter = async (
   }
   
   try {
-    const model = 'gemini-2.5-flash-image-preview';
+    const model = 'gemini-2.5-flash-image';
     
     const faithfulnessInstruction = getFaithfulnessInstruction(faithfulness);
 
     const instructionText = `
-      **TASK:** You are a master fashion designer and digital artist. Redraw the character from the REFERENCE image, but dress them in a completely new outfit as described by the user. The character's face, body, and likeness must be preserved according to the faithfulness instruction. The background should be a simple, neutral studio backdrop unless specified otherwise by the user. The final image should be a full-body portrait with a 9:16 aspect ratio.
+      **TASK:** You are a master fashion designer and digital artist. Redraw the character from the REFERENCE image, but dress them in a completely new outfit as described by the user. The background should be a simple, neutral studio backdrop unless specified otherwise by the user.
+
+      **STYLE:** The final image MUST be photorealistic. Do not produce cartoons, illustrations, or paintings. The style should be that of a high-end photograph.
+
+      **CRITICAL INSTRUCTIONS:**
+      1.  **Likeness:** The character's face, body, and likeness must be preserved according to the faithfulness instruction.
+      2.  **Cohesive Lighting:** The final image must be a full-body portrait with a 9:16 aspect ratio, featuring professional, cinematic studio lighting. The lighting on the character and the new outfit must be perfectly cohesive and come from the same light source(s) to create a realistic and harmonious portrait.
       
       **REFERENCE IMAGE:** The provided image is a reference for the character '${character.name}'.
       
@@ -444,7 +490,7 @@ export const generateOutfitForCharacter = async (
 
       **CHARACTER FAITHFULNESS:** ${faithfulnessInstruction}
 
-      **USER'S OUTFIT DESCRIPTION:**
+      **USER'S OUTFIT DESCRIPTION (provided in their native language):**
     `.trim();
     
     const mimeType = character.referenceImageMimeType || 'image/png';
@@ -484,5 +530,61 @@ export const generateOutfitForCharacter = async (
 
   } catch (e) {
     handleApiError(e, 'generate outfit for the character');
+  }
+};
+
+/**
+ * Generates a video using the Gemini API.
+ * @param prompt The text prompt describing the desired video.
+ * @param image An optional image to use as a starting point.
+ * @param aspectRatio The desired aspect ratio for the video.
+ * @returns A promise that resolves to an object containing the video URL and the original prompt.
+ */
+export const generateVideo = async (
+  prompt: string,
+  image: { base64: string; mimeType: string } | null | undefined,
+  aspectRatio: string
+): Promise<{ videoUrl: string, prompt: string }> => {
+  try {
+    const model = 'veo-3.1-fast-generate-preview';
+
+    // The Veo API needs a new GoogleGenAI instance to pick up the key from the dialog
+    const veaAi = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+
+    let operation = await veaAi.models.generateVideos({
+      model: model,
+      prompt: `**TASK:** You are a master multilingual filmmaker. Create a short, cinematic, photorealistic video based on the user's prompt. Pay close attention to lighting, mood, and high-quality visuals.
+      
+      **USER'S PROMPT (in their native language):** ${prompt}`,
+      ...(image && {
+        image: {
+          imageBytes: image.base64,
+          mimeType: image.mimeType,
+        }
+      }),
+      config: {
+        numberOfVideos: 1,
+        resolution: '720p',
+        aspectRatio: aspectRatio as '16:9' | '9:16',
+      }
+    });
+
+    // Poll for the result
+    while (!operation.done) {
+      // Wait for 10 seconds before checking the status again.
+      await new Promise(resolve => setTimeout(resolve, 10000));
+      operation = await veaAi.operations.getVideosOperation({ operation: operation });
+    }
+
+    const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
+
+    if (downloadLink) {
+      return { videoUrl: downloadLink, prompt };
+    }
+
+    throw new Error("Video generation completed, but no download link was provided.");
+
+  } catch (e) {
+    handleApiError(e, 'generate the video');
   }
 };

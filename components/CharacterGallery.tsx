@@ -43,7 +43,7 @@ export const CharacterGallery: React.FC<CharacterGalleryProps> = ({
                 <span>Create New</span>
             </button>
         </div>
-      <div className="p-2 bg-gray-950 border border-gray-700 rounded-lg">
+      <div className="p-2 bg-black/20 border border-white/10 rounded-lg">
         {characters.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             <p>Your character library is empty.</p>
@@ -56,7 +56,7 @@ export const CharacterGallery: React.FC<CharacterGalleryProps> = ({
                 key={char.id}
                 onClick={() => !disabled && onSelectCharacter(char.id === selectedCharacterId ? null : char.id)}
                 className={`relative group aspect-square overflow-hidden rounded-md cursor-pointer transition-all duration-200
-                           ${selectedCharacterId === char.id ? 'ring-2 ring-orange-500 shadow-lg' : 'ring-1 ring-gray-700 hover:ring-orange-600'}
+                           ${selectedCharacterId === char.id ? 'ring-2 ring-orange-500 shadow-[0_0_15px_theme(colors.orange.500/50%)]' : 'ring-1 ring-white/10 hover:ring-orange-600/70'}
                            ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 {char.referenceImageBase64 ? (
@@ -80,7 +80,7 @@ export const CharacterGallery: React.FC<CharacterGalleryProps> = ({
                             e.stopPropagation();
                             if (!disabled) onGenerateOutfits(char);
                         }}
-                        className="p-1.5 bg-black/60 rounded-full text-white hover:bg-orange-600"
+                        className="p-1.5 bg-black/60 rounded-full text-white hover:bg-orange-600 transition-colors"
                         aria-label={`Generate Outfits for ${char.name}`}
                         title={`Generate Outfits for ${char.name}`}
                     >
@@ -91,7 +91,7 @@ export const CharacterGallery: React.FC<CharacterGalleryProps> = ({
                             e.stopPropagation(); // Prevent selection when clicking edit
                             if (!disabled) onEditCharacter(char);
                         }}
-                        className="p-1.5 bg-black/60 rounded-full text-white hover:bg-orange-600"
+                        className="p-1.5 bg-black/60 rounded-full text-white hover:bg-orange-600 transition-colors"
                         aria-label={`Edit ${char.name}`}
                         title={`Edit ${char.name}`}
                     >
@@ -102,7 +102,7 @@ export const CharacterGallery: React.FC<CharacterGalleryProps> = ({
                             e.stopPropagation();
                             if (!disabled) onDeleteCharacter(char.id);
                         }}
-                        className="p-1.5 bg-black/60 rounded-full text-white hover:bg-red-600"
+                        className="p-1.5 bg-black/60 rounded-full text-white hover:bg-red-600 transition-colors"
                         aria-label={`Delete ${char.name}`}
                         title={`Delete ${char.name}`}
                     >

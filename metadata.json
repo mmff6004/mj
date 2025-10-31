@@ -1,5 +1,5 @@
 {
   "name": " orginal MJ AI",
-  "description": "An advanced web application that utilizes the Gemini 'nano-banana' model (gemini-2.5-flash-image-preview) to perform powerful, prompt-based image editing. Upload an image, describe your desired changes, and let the AI generate a new version.",
+  "description": "An advanced web application that utilizes the Gemini 'nano-banana' model (gemini-2.5-flash-image) to perform powerful, prompt-based image editing. Upload an image, describe your desired changes, and let the AI generate a new version.",
   "requestFramePermissions": []
 }

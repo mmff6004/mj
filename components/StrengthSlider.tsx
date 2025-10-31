@@ -10,12 +10,12 @@ interface StrengthSliderProps {
 
 export const StrengthSlider: React.FC<StrengthSliderProps> = ({ label, value, onChange, minLabel, maxLabel }) => {
   return (
-    <div className="bg-gray-800/50 p-4 rounded-lg">
+    <div className="bg-black/20 p-4 rounded-lg">
       <div className="flex justify-between items-center mb-2">
         <label htmlFor="strength-slider" className="font-medium text-gray-300">
           {label}
         </label>
-        <span className="text-sm font-mono bg-gray-900 text-orange-400 px-2 py-1 rounded">
+        <span className="text-sm font-mono bg-gray-900/50 text-orange-400 px-2 py-1 rounded">
           {value}
         </span>
       </div>
@@ -29,7 +29,7 @@ export const StrengthSlider: React.FC<StrengthSliderProps> = ({ label, value, on
           step="1"
           value={value}
           onChange={(e) => onChange(parseInt(e.target.value, 10))}
-          className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer
+          className="w-full h-2 bg-gray-700/50 rounded-lg appearance-none cursor-pointer
                      [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:bg-orange-500 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:transition-all
                      [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:bg-orange-500 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-none"
         />

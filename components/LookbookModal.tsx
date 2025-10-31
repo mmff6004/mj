@@ -10,7 +10,7 @@ interface OutfitGeneratorModalProps {
   isOpen: boolean;
   onClose: () => void;
   character: Character | null;
-  onImageSelect: (imageBase64: string) => void;
+  onImageSelect: (imageBase64: string, mimeType?: string) => void;
   onOutfitGenerated: (result: EditResult) => void;
 }
 
@@ -47,6 +47,7 @@ export const OutfitGeneratorModal: React.FC<OutfitGeneratorModalProps> = ({ isOp
     try {
       const result = await generateOutfitForCharacter(character, prompt, faithfulness);
       setGeneratedOutfit(result);
+      onOutfitGenerated(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unknown error occurred.");
     } finally {
@@ -56,8 +57,7 @@ export const OutfitGeneratorModal: React.FC<OutfitGeneratorModalProps> = ({ isOp
 
   const handleSelect = () => {
     if (generatedOutfit) {
-      onImageSelect(generatedOutfit.editedImageBase64);
-      onOutfitGenerated(generatedOutfit);
+      onImageSelect(generatedOutfit.editedImageBase64, generatedOutfit.mimeType);
       handleClose();
     }
   };
@@ -75,8 +75,8 @@ export const OutfitGeneratorModal: React.FC<OutfitGeneratorModalProps> = ({ isOp
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={handleClose}>
-      <div className="bg-gray-950 border border-gray-800 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
-        <div className="p-6 border-b border-gray-800">
+      <div className="bg-gray-900/50 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="p-6 border-b border-white/10">
           <h2 className="text-2xl font-bold text-white">Generate Outfits for {character?.name}</h2>
           <p className="text-sm text-gray-400 mt-1">Describe a new outfit for your character and see them wear it.</p>
         </div>
@@ -86,7 +86,7 @@ export const OutfitGeneratorModal: React.FC<OutfitGeneratorModalProps> = ({ isOp
           <div className="flex flex-col gap-4">
             <div className="flex justify-center">
                 {character.referenceImageBase64 && (
-                    <img src={`data:image/png;base64,${character.referenceImageBase64}`} alt={character.name} className="w-48 h-auto object-contain rounded-lg border-2 border-gray-700" />
+                    <img src={`data:image/png;base64,${character.referenceImageBase64}`} alt={character.name} className="w-48 h-auto object-contain rounded-lg border-2 border-white/10" />
                 )}
             </div>
             <div>
@@ -97,7 +97,7 @@ export const OutfitGeneratorModal: React.FC<OutfitGeneratorModalProps> = ({ isOp
                 value={prompt}
                 onChange={e => setPrompt(e.target.value)}
                 placeholder="e.g., a futuristic cyberpunk jacket with neon lights, a black leather skirt, and combat boots."
-                className="w-full p-2 bg-gray-900 border border-gray-700 rounded-md focus:ring-orange-500 focus:border-orange-500"
+                className="w-full p-2 bg-white/5 border border-white/10 rounded-md focus:ring-orange-500 focus:border-orange-500"
               />
             </div>
              <div className="flex flex-col gap-2">
@@ -107,7 +107,7 @@ export const OutfitGeneratorModal: React.FC<OutfitGeneratorModalProps> = ({ isOp
                     <button
                       key={label}
                       onClick={() => setPrompt(suggestionPrompt)}
-                      className="px-2.5 py-1 text-xs font-medium rounded-full transition-colors duration-200 bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white"
+                      className="px-2.5 py-1 text-xs font-medium rounded-full transition-colors duration-200 bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white"
                       title={suggestionPrompt}
                     >
                       {label}
@@ -125,7 +125,7 @@ export const OutfitGeneratorModal: React.FC<OutfitGeneratorModalProps> = ({ isOp
             <button
                 onClick={handleGenerate}
                 disabled={isLoading || !prompt}
-                className="flex-grow flex items-center justify-center gap-2 w-full p-4 bg-gradient-to-r from-orange-500 to-yellow-500 text-white font-bold rounded-lg shadow-lg hover:shadow-orange-500/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none transition-all duration-300 mt-auto"
+                className="flex-grow flex items-center justify-center gap-2 w-full p-4 bg-gradient-to-r from-orange-500 to-yellow-500 text-white font-bold rounded-lg shadow-lg hover:shadow-[0_0_20px_theme(colors.orange.500/40%)] disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none transition-all duration-300 mt-auto"
             >
                 <SparklesIcon className="w-6 h-6" />
                 <span>Generate Outfit</span>
@@ -133,12 +133,12 @@ export const OutfitGeneratorModal: React.FC<OutfitGeneratorModalProps> = ({ isOp
           </div>
           
           {/* Right Side: Result */}
-          <div className="aspect-[9/16] bg-gray-900 rounded-lg flex items-center justify-center relative group overflow-hidden border border-gray-800">
+          <div className="aspect-[9/16] bg-black/20 rounded-lg flex items-center justify-center relative group overflow-hidden border border-white/10">
             {isLoading && <LoadingSpinner />}
             {error && <p className="text-sm text-red-400 text-center p-4">{error}</p>}
             {generatedOutfit && !isLoading && (
               <>
-                <img src={`data:image/png;base64,${generatedOutfit.editedImageBase64}`} alt="Generated outfit" className="w-full h-full object-cover" />
+                <img src={`data:${generatedOutfit.mimeType || 'image/png'};base64,${generatedOutfit.editedImageBase64}`} alt="Generated outfit" className="w-full h-full object-cover" />
                 <div
                     className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
                     onClick={handleSelect}
@@ -155,8 +155,8 @@ export const OutfitGeneratorModal: React.FC<OutfitGeneratorModalProps> = ({ isOp
           </div>
         </div>
 
-        <div className="p-6 border-t border-gray-800 flex justify-end items-center">
-            <button onClick={handleClose} className="px-4 py-2 bg-gray-800 text-gray-300 rounded-md hover:bg-gray-700">Close</button>
+        <div className="p-6 border-t border-white/10 flex justify-end items-center">
+            <button onClick={handleClose} className="px-4 py-2 bg-white/5 text-gray-300 rounded-md hover:bg-white/10 transition-colors">Close</button>
         </div>
       </div>
     </div>

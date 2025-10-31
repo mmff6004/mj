@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 export const ArrowUpOnSquareIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
