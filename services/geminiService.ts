@@ -28,7 +28,13 @@ const handleApiError = (e: unknown, context: string): never => {
 
   // Check for common API errors like safety violations.
   if (errorMessage.toLowerCase().includes('safety')) {
-    throw new Error(`The request to ${context} was blocked for safety reasons. Please adjust your prompt or image and try again.`);
+    const detailedMessage = `The request to ${context} was blocked for safety reasons. This can happen due to the prompt, the images used, or their combination.
+
+Please try adjusting your request by:
+- Using different images.
+- Making your prompt more descriptive.
+- Ensuring your request is respectful and avoids potentially sensitive topics.`;
+    throw new Error(detailedMessage);
   }
 
   // Generic fallback for other errors.

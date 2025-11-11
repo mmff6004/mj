@@ -44,7 +44,7 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ isLoading, error, 
       return (
         <div className="flex flex-col items-center justify-center h-full text-center bg-red-900/30 border border-red-500/50 p-4 rounded-lg">
           <p className="font-semibold text-red-300">An Error Occurred</p>
-          <p className="text-sm text-red-400/90 mt-2">{error}</p>
+          <p className="text-sm text-red-400/90 mt-2 whitespace-pre-wrap">{error}</p>
         </div>
       );
     }
